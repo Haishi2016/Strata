@@ -45,7 +45,7 @@ Agentic AI deepens the problem further. A diagnostic agent that calls a drug int
 
 ## 2. Our answer: Strata
 
-Strata is a unified, open-source infrastructure control plane and agentic harness that manages compute, storage, networking, and AI agent lifecycle as a single coherent system. It treats processes, containers, and virtual machines as three expressions of the same abstraction. It runs on a Raspberry Pi edge node and on a 10,000-core GPU cluster. It runs on bare metal Linux and inside Kubernetes. It operates with no dedicated control plane hardware — the control plane is embedded in the agents that run on every node.
+Strata is a unified, open-source infrastructure control plane and agentic harness that manages compute, storage, networking, AI agent lifecycle and governance as a single coherent system. It treats processes, containers, and virtual machines as three expressions of the same abstraction. It runs on a Raspberry Pi edge node and on a 10,000-core GPU cluster. It runs on bare metal Linux and inside Kubernetes. It operates with no dedicated control plane hardware — the control plane is embedded in the agents that run on every node.
 
 On top of the compute fabric, Strata Harness provides the trust and governance layer that makes it safe to deploy AI agents into clinical environments: a skill and tool registry, a layered guardrail engine, a human escalation queue, a federated policy system, and an immutable audit ledger — all running locally, with no patient data leaving the facility.
 
