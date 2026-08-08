@@ -1,9 +1,9 @@
 # Strata
 
-**A unified, open-source compute fabric and agentic harness for the intelligence era**
+**The open platform for governing, connecting, and operating AI agents at scale — across any cloud, any edge, any infrastructure**
 
-> Vision Paper · v0.3 · June 2026
-> OSS-first · CNCF track · Healthcare vertical launch
+> Vision Paper · v0.4 · August 2026
+> OSS-first · CNCF track · Linux Agent Foundation · Healthcare vertical launch
 > *Pre-publication draft — confidential*
 
 ---
@@ -13,556 +13,495 @@
 1. [The problem](#1-the-problem)
 2. [Our answer: Strata](#2-our-answer-strata)
 3. [Guiding principles](#3-guiding-principles)
-4. [Architecture: the compute fabric](#4-architecture-the-compute-fabric)
-5. [Multi-tenancy — isolation at every layer](#5-multi-tenancy--isolation-at-every-layer)
-6. [Confidential compute and containers](#6-confidential-compute-and-containers)
-7. [Agentic management and operations](#7-agentic-management-and-operations)
-8. [Hyperconverged control plane — no dedicated machines](#8-hyperconverged-control-plane--no-dedicated-machines)
-9. [Storage and networking](#9-storage-and-networking)
-10. [Accelerator subsystem](#10-accelerator-subsystem)
-11. [Why healthcare first](#11-why-healthcare-first)
-12. [Strata Harness — the trust fabric](#12-strata-harness--the-trust-fabric)
+4. [Architecture: the agentic middle layer](#4-architecture-the-agentic-middle-layer)
+5. [Intent descriptors — ambient workflow intelligence](#5-intent-descriptors--ambient-workflow-intelligence)
+6. [Guardrail engine — layered enforcement](#6-guardrail-engine--layered-enforcement)
+7. [Human escalation queue](#7-human-escalation-queue)
+8. [Federated harness policy](#8-federated-harness-policy)
+9. [Multi-tenancy — isolation at every layer](#9-multi-tenancy--isolation-at-every-layer)
+10. [Confidential compute and trust](#10-confidential-compute-and-trust)
+11. [Open standards stack](#11-open-standards-stack)
+12. [Why healthcare first](#12-why-healthcare-first)
 13. [Deploying agentic systems — the hospital use case](#13-deploying-agentic-systems--the-hospital-use-case)
-14. [Guardrail engine — layered enforcement](#14-guardrail-engine--layered-enforcement)
-15. [Human escalation queue](#15-human-escalation-queue)
-16. [Federated harness policy](#16-federated-harness-policy)
-17. [Compliance as a first-class output](#17-compliance-as-a-first-class-output)
-18. [Provider ecosystem](#18-provider-ecosystem)
-19. [Community and governance](#19-community-and-governance)
-20. [Roadmap](#20-roadmap)
-21. [Why now](#21-why-now)
+14. [Provider ecosystem and marketplace](#14-provider-ecosystem-and-marketplace)
+15. [Monetization](#15-monetization)
+16. [Community and governance](#16-community-and-governance)
+17. [Roadmap](#17-roadmap)
+18. [Why now](#18-why-now)
 
 ---
 
 ## 1. The problem
 
-Modern infrastructure is deeply fragmented. Compute, storage, and networking are provisioned through separate control planes, separate APIs, and separate operational teams. Running a GPU cluster for inference beside a high-throughput NVMe database beside a latency-sensitive clinical service means operating three fundamentally different systems — often across three different vendors, with three different operational models.
+Every organization deploying AI agents is independently reinventing the same missing layer.
 
-The cost of this fragmentation is highest where it matters most: environments where reliable, low-latency, AI-augmented computing can save lives. A hospital cannot afford a three-day provisioning cycle. A medical researcher cannot afford vendor lock-in that prevents them from moving a model to an edge appliance in a clinic with no cloud connectivity. A practitioner using an AI-assisted diagnostic tool cannot afford a platform that requires a dedicated infrastructure team to keep running.
+They build bespoke registries to track what agents exist. They wire ad-hoc trust relationships between agents that need to talk. They maintain separate audit logs per agent system, assembled manually when a regulator or incident review asks what happened. They write one-off orchestration glue every time a new business workflow spans multiple agents. And when something goes wrong — a hallucinated output, a decision that should have been escalated, a policy violated at 2am — there is no coherent record of the cross-agent context, and no systematic path for the human who needs to respond.
 
-Agentic AI deepens the problem further. A diagnostic agent that calls a drug interaction service, queries an EHR, invokes a radiology classifier, and summarizes a clinical note touches four different systems — each with its own API, its own access control model, its own audit log. There is no unified plane that says: this agent is approved to use these capabilities, within these guardrails, and every decision it makes is recorded in a form regulators can inspect.
+The problem compounds with heterogeneity. A hospital runs agents from five vendors on three different infrastructure substrates — AWS Lambda, an on-premise GPU cluster, and edge appliances in clinic rooms. Each has its own deployment model, its own access control, its own notion of what a "guardrail" is. There is no unified operational lens across this estate. There is no governance layer that enforces the same policy everywhere. There is no way to see that the radiology agent, the drug interaction agent, and the clinical note summarizer are all participating in the same patient encounter — and to audit that encounter as a coherent unit.
 
-> **The infrastructure layer should be invisible. Teams should think about what they are running, not where or how — and regulators should be able to verify what happened, without teams spending weeks assembling audit trails by hand.**
+Meanwhile individual agents are oblivious to the business workflows they participate in. A payment validation agent processes a transaction without knowing it is the third step in a high-priority enterprise order with a 17:00 SLA. A triage agent surfaces a recommendation without knowing that two upstream agents already attempted and deferred the same question. Agents make locally reasonable decisions that are globally suboptimal because they have no ambient awareness of the workflow they are part of.
+
+> **The infrastructure layer is solved — or solvable. The missing layer is above it: a vendor-neutral platform that governs, connects, and operates a heterogeneous agent estate, and gives every agent enough context to act intelligently within the workflows it participates in.**
 
 ---
 
 ## 2. Our answer: Strata
 
-Strata is a unified, open-source infrastructure control plane and agentic harness that manages compute, storage, networking, AI agent lifecycle and governance as a single coherent system. It treats processes, containers, and virtual machines as three expressions of the same abstraction. It runs on a Raspberry Pi edge node and on a 10,000-core GPU cluster. It runs on bare metal Linux and inside Kubernetes. It operates with no dedicated control plane hardware — the control plane is embedded in the agents that run on every node.
+Strata is the open platform for the agentic middle layer. It sits between infrastructure — which can be any cloud, any Kubernetes cluster, any edge device, any bare metal node — and the agents that organizations deploy on top of it. It does not run the agents. It governs, connects, and operates them.
 
-On top of the compute fabric, Strata Harness provides the trust and governance layer that makes it safe to deploy AI agents into clinical environments: a skill and tool registry, a layered guardrail engine, a human escalation queue, a federated policy system, and an immutable audit ledger — all running locally, with no patient data leaving the facility.
+Strata provides:
+
+- A **universal agent and skill registry** — versioned, signed, OCI-packaged artifacts deployable to any node
+- An **intent descriptor system** — structured workflow context propagated automatically to every agent participating in a business workflow, giving agents ambient intelligence about the goal, constraints, participants, and state of the work they are part of
+- A **layered guardrail engine** — policy evaluated in-process on the node, with no network round-trip on the hot path, governed by declarative Rego rules version-controlled alongside the agents they govern
+- A **fleet control plane** — GitOps-style declarative fleet state across cloud and edge; canary rollouts; drift detection
+- An **identity fabric** — SPIFFE/SPIRE workload certificates for every agent; mTLS on every agent-to-agent and agent-to-tool call; revocable per-agent, per-fleet
+- An **audit ledger** — append-only, hash-chained, OCSF-compliant; every invocation, every skill call, every policy decision, every escalation, indexed by workflow instance
+- A **human escalation queue** — structured decision workflows, not alerting; every escalation carries the full cross-agent context of the workflow that produced it
+- A **federated policy system** — hierarchical governance from platform operator down to department, where policy can be tightened but never loosened at lower levels
+
+Strata runs on any infrastructure. It is indifferent to what models run the agents, what cloud hosts the compute, and what vendors supply the skills. It is the constant — the governance, identity, and operational layer that makes a heterogeneous agent estate legible, trustworthy, and manageable at scale.
 
 ---
 
 ## 3. Guiding principles
 
-| Principle | Description |
+| Principle | What it means |
 |---|---|
-| **OSS first** | Everything we build is contributed to CNCF or the Linux Agent Foundation. No proprietary lock-in. Community shapes v1, as it did with Kubernetes. |
-| **Vendor agnostic** | Cloud, on-premise, edge, hybrid. AWS, GCP, bare metal, a rack in a hospital basement — one control plane, one API. |
-| **Any form factor** | Single-node edge appliance or thousand-node GPU cluster. Same binary, same API, same operational model. |
-| **No control plane tax** | The control plane is embedded in every agent node. No dedicated machines, no circular upgrade dependencies. |
-| **Resilient by default** | Workloads survive agent restarts, upgrades, and quorum loss. Stateful services are never disrupted by infrastructure operations. |
-| **AI-native** | First-class GPU, NPU, and CPU inference acceleration. MIG partitioning, NUMA affinity, RoCEv2 fabric — built in from the start. |
+| **Infra-agnostic** | Run on AWS, GCP, Azure, bare metal, K8s, or a Raspberry Pi at a clinic. Same binary, same API, same governance model everywhere. |
+| **Model-agnostic** | Govern agents built on any foundation model — Claude, GPT-4o, Gemini, Llama, local fine-tunes. Strata does not care what is inside the agent. It cares about what the agent does. |
+| **OSS-first** | Core runtime, protocol specs, and audit schema contributed to CNCF and the Linux Agent Foundation. No proprietary lock-in at the protocol or data layer. |
+| **Standards over proprietary** | Every protocol, event format, and identity mechanism is an open standard with an independent standards body. We do not invent when a standard exists. |
+| **Ambient context, not central control** | Agents receive workflow context and make better local decisions. The platform does not route every agent call through a central orchestrator. |
+| **Governance as infrastructure** | Policy enforcement, audit, and identity are not bolt-on features. They are load-bearing parts of the platform, as fundamental as the registry and the runtime. |
+| **Edge-first resilience** | An edge node with no connectivity must still enforce policy, still run agents, and still accumulate audit events. The control plane is not in the hot path. |
 
 ---
 
-## 4. Architecture: the compute fabric
+## 4. Architecture: the agentic middle layer
 
-Strata runs as a single binary — `strata-agent` — on every node. A subset of nodes (three to five) participate in a Raft consensus cluster that replicates desired state. All other nodes are learners: they receive replicated state without voting. The entire system is written in Rust.
-
-Every resource — a compute workload, a storage volume, a network attachment, a tenant namespace, an agent deployment — is modeled as a declarative spec with a typed reconciler that drives actual state toward desired state.
+Strata assumes infrastructure exists. It does not provision compute, storage, or networking. It runs on top of whatever infrastructure the customer already operates.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Strata Harness                                              │
-│  Agent registry · skill registry · guardrail engine          │
-│  audit ledger · escalation queue · federated policy          │
-├──────────────────────────────────────────────────────────────┤
-│  Agentic operations                                          │
-│  Capacity planner · upgrade orchestrator · incident responder│
-├──────────────────────────────────────────────────────────────┤
-│  Control plane                                               │
-│  Embedded Raft · declarative reconciler · scheduler          │
-├──────────────────────────────────────────────────────────────┤
-│  Multi-tenancy & confidential compute                        │
-│  Namespace isolation · TEE (SEV-SNP / TDX) · attestation    │
-├──────────────────────────────────────────────────────────────┤
-│  Compute                                                     │
-│  Process · OCI container · confidential container · VM       │
-├──────────────────────────────────────────────────────────────┤
-│  Storage                                                     │
-│  NVMe (SPDK) · distributed block (Linstor) · JuiceFS        │
-├──────────────────────────────────────────────────────────────┤
-│  Networking                                                  │
-│  eBPF/XDP (Cilium) · SR-IOV · RoCEv2 RDMA                  │
-├──────────────────────────────────────────────────────────────┤
-│  Accelerators                                                │
-│  Nvidia MIG · AMD ROCm · Intel AMX · ARM SVE2               │
-└──────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  Developer / operator plane                                   │
+│  CLI · GitOps API · Web console · Provider SDK               │
+├───────────────────────────────────────────────────────────────┤
+│  Fleet control plane  (SaaS or self-hosted)                  │
+│  Agent registry · Skill registry · Policy store              │
+│  Audit ledger · Escalation queue · Fleet dashboard           │
+├───────────────────────────────────────────────────────────────┤
+│  Node runtime  (cloud / on-prem / edge — runs anywhere)      │
+│  Agent executor · Skill loader (WASM sandbox)                │
+│  Intent descriptor engine · Guardrail engine (OPA in-proc)  │
+│  SPIFFE identity sidecar · OTel collector · Policy cache     │
+├───────────────────────────────────────────────────────────────┤
+│  Heterogeneous infrastructure                                 │
+│  AWS · Azure · GCP · bare metal · K8s · edge device          │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-### Compute backends
+### Core components
 
-- **Process** — cgroups v2, Linux namespaces for lightweight isolation without OCI overhead.
-- **Container** — containerd over ttrpc. EROFS snapshotter for read-only inference model layers.
-- **Confidential container** — OCI container inside a hardware TEE via Kata Containers (kata-cc). Image encrypted at rest; key released only after hardware attestation.
-- **VM** — cloud-hypervisor (~100ms boot, VFIO GPU passthrough) or Firecracker for microVM isolation.
-
-### Open source component map
-
-| Layer | Component | Role |
-|---|---|---|
-| State store | TiKV | Distributed KV, horizontal scale, Rust client |
-| Containers | containerd | Industry-standard runtime, ttrpc interface |
-| Confidential containers | Kata Containers (kata-cc) | OCI containers inside hardware TEE |
-| VMs | cloud-hypervisor | Rust VMM, fast boot, VFIO GPU passthrough |
-| NVMe I/O | SPDK | Kernel-bypass NVMe via vhost-user |
-| Distributed block | Linstor + DRBD | Synchronous replication, kernel-space path |
-| Model weights FS | JuiceFS | S3-backed, aggressive local SSD cache |
-| Networking | Cilium / eBPF | XDP fast path, per-tenant network policy |
-| GPU management | NVML / ROCm SMI | MIG partitioning, topology queries |
-| Identity | SPIFFE / SPIRE | Zero-trust workload identity, mTLS |
-| Attestation | AMD KDS / Intel PCS | Hardware TEE measurement verification |
-| Key management | HashiCorp Vault + TEE plugin | Sealed secret release gated on attestation |
-| Observability | OpenTelemetry | Traces, metrics, logs — vendor-neutral |
-
----
-
-## 5. Multi-tenancy — isolation at every layer
-
-A hospital system is not a single tenant. A cardiology department, a radiology group, a clinical research team, and a third-party diagnostic AI vendor may all run workloads on the same Strata cluster simultaneously. Each must be isolated: their network traffic, their storage I/O, their GPU time, and their data must not leak across boundaries, and their operational failures must not cascade.
-
-Strata models multi-tenancy as a first-class resource — the **Namespace** — that every other resource lives inside, and enforces isolation at each layer of the stack independently.
-
-> **Tenant isolation is not a feature added on top of the platform. It is a structural property enforced at the hardware, kernel, and network layers simultaneously. No single isolation boundary is relied upon alone.**
-
-### Isolation model by layer
-
-| Layer | Isolation mechanism | What it prevents | Enforcement |
-|---|---|---|---|
-| **Network** | Per-tenant eBPF network policy · VXLAN tenant segments with distinct VNIs · deny-by-default between namespaces · explicit allow-list for cross-tenant service calls | Tenant A sniffing or injecting traffic on Tenant B's segment. Cross-tenant data exfiltration via network. | Cilium eBPF · XDP |
-| **Compute** | cgroups v2 hierarchy — tenant root cgroup → workload cgroups · CPU quota and pinning per namespace · memory limits with hard eviction · PID namespace isolation | One tenant consuming all CPU and starving others. Process visibility across namespace boundaries. | cgroups v2 · Linux namespaces |
-| **Storage** | Namespace-scoped volumes — cross-namespace mounts blocked at the reconciler · per-tenant I/O QoS (IOPS and bandwidth limits via blk-mq cgroups) · separate encryption keys per tenant volume | Tenant A consuming all NVMe bandwidth. Volume mounts crossing namespace boundaries. | blk-mq · LUKS |
-| **GPU** | MIG partitions assigned per namespace — hardware-isolated memory between instances · time-slicing with strict quota enforcement via NVML for non-MIG deployments | Tenant A reading GPU memory residue from Tenant B's completed inference. GPU exhaustion by one tenant. | NVML MIG · VFIO |
-| **Harness** | Skill registry is namespace-scoped · audit ledger partitioned by namespace · escalation queue events namespace-scoped · SPIFFE trust domain per tenant namespace | Cross-tenant agent invocation. Audit log data leaking between tenants. Skill enumeration across namespaces. | SPIFFE · Harness RBAC |
-| **Identity** | Each namespace has its own SPIFFE trust domain. Workload certificates cannot authenticate to resources in another namespace without explicit federation policy. | A compromised workload in Tenant A authenticating to Tenant B's services using a stolen certificate. | SPIRE · mTLS |
-
-### Hardware virtualization for tenant isolation
-
-For tenants requiring stronger isolation than Linux namespaces and cgroups provide — regulated workloads, third-party vendor code, or environments where kernel-level isolation is insufficient — Strata supports hardware-backed isolation:
-
-**SR-IOV NIC Virtual Functions** — each tenant namespace is assigned dedicated NIC VFs. Traffic passes through its VF, enforced in hardware by the physical NIC. No shared kernel network stack between tenants. The agent assigns VFs at namespace creation time via sysfs and binds them to `vfio-pci`.
-
-**SR-IOV GPU Virtual Functions** — for Nvidia A-series and H-series GPUs that support SR-IOV, each tenant can be assigned a dedicated GPU VF rather than a MIG instance. VF isolation is enforced by the GPU hardware — no shared memory, no shared compute context, no cross-VF cache side channels.
-
-**VM-per-tenant** — for the highest isolation tier, each tenant namespace runs inside a dedicated VM (cloud-hypervisor or Firecracker). The hypervisor provides the isolation boundary. A kernel vulnerability in one tenant's VM does not expose another. From the tenant's perspective the API is identical to the container or process tier — the isolation tier is an operator-configured property of the namespace spec.
-
-Tenants select their isolation tier in their namespace spec. The scheduler enforces co-location constraints accordingly — VM-tier tenants are never placed on the same physical host as a lower isolation tier tenant unless the cluster operator explicitly allows it.
-
----
-
-## 6. Confidential compute and containers
-
-Tenant namespace isolation prevents workloads from seeing each other. Confidential compute prevents the infrastructure operator from seeing the workloads. These are different threat models, and both matter in healthcare.
-
-A hospital running a diagnostic AI model trained on proprietary data does not want the cloud provider, the managed service operator, or even their own infrastructure team to be able to read the model weights or the patient data during inference. Hardware trusted execution environments (TEEs) make this possible: the CPU encrypts the memory of the workload, and only code with a verifiable measurement that matches a known-good value can decrypt it.
-
-> **Confidential compute does not require trusting the infrastructure operator. The patient data and the model weights are encrypted by the CPU hardware itself. The operator sees only ciphertext — even with root access to the physical machine.**
-
-### Supported TEE technologies
-
-| Technology | Scope | Key property |
-|---|---|---|
-| **AMD SEV-SNP** | Full VM memory encryption | Per-VM key held in AMD PSP. Hardware attestation report proves VM initial state. Primary target for VM-tier confidential workloads. |
-| **Intel TDX** | Trust Domain memory encryption | Keys managed by Intel TDX module in firmware. TDREPORT for remote attestation. Supported on 4th-gen Xeon Scalable and newer. |
-| **Intel SGX** | Application-level enclaves | Smaller TCB than full-VM TEEs. Used for key management sidecars, attestation brokers, and cryptographic operations isolated from the guest OS. |
-| **Kata Containers (kata-cc)** | OCI containers inside TEE | Unmodified container images, encrypted at rest, decrypted only inside a verified TEE. Container runtime, guest kernel, and OCI layers all measured and included in the attestation report. |
-
-### Trust ladder — what each tier protects
-
-| Tier | Isolation boundary | Residual threats | Suitable for |
-|---|---|---|---|
-| 1 — Standard container | cgroups + namespaces | Host OS, infrastructure operator, kernel exploit all have memory access | General workloads, non-sensitive data |
-| 2 — VM-per-tenant | Hypervisor | Hypervisor and infrastructure operator still have VM memory access | Regulated workloads, stronger tenant isolation |
-| 3 — Confidential VM (SEV-SNP / TDX) | CPU memory encryption | Physical memory bus attacks (mitigated by memory encryption) | PHI processing, model weight protection, operator-untrusted environments |
-| 4 — Confidential container (kata-cc + SEV-SNP / TDX) | CPU memory encryption + measured container image | None within the defined threat model | Full operator-blind PHI inference, third-party model IP protection |
-
-### Remote attestation and sealed secrets
-
-Hardware attestation is only useful if a key release policy enforces it. Strata integrates with the remote attestation flow to gate secret delivery on a verified TEE measurement:
-
-1. **TEE measurement** — the hardware generates an attestation report containing a cryptographic measurement of the workload: the code, initial memory contents, and firmware. This measurement is unique to this exact version of this exact workload on this exact TEE platform.
-
-2. **Attestation verification** — the attestation report is sent to a verifier: either Strata's own attestation service (self-hosted) or a third-party service (AMD KDS, Intel PCS). The verifier checks the hardware signature and confirms the measurement matches the expected value registered when the workload was approved. **In the highest-trust deployments, the attestation verifier is customer-controlled** — Strata provides the software, the customer operates it. This ensures that a compromised Strata employee cannot register a backdoored measurement as valid.
-
-3. **Sealed key release** — only after successful attestation does the key management system (HashiCorp Vault with TEE plugin, or Azure mHSM) release the decryption key for the workload's data. If the measurement does not match — because the workload code has been tampered with or the TEE firmware is outdated — the key is withheld and the workload cannot start.
-
-4. **Operator-blind inference** — the model is encrypted at rest with a key sealed to a specific TEE measurement. The model owner publishes the expected measurement. The infrastructure operator runs the cluster and can observe that inference is happening and how long it takes — but cannot read the weights or the patient inputs. This protects both patient PHI and third-party model IP simultaneously.
-
-### Confidential compute in the Strata Harness
-
-The harness is attestation-aware. When an agent is deployed into a confidential container, the harness records the expected TEE measurement in the agent registry alongside the model version and skill set. The audit ledger entry for every inference includes the attestation status of the executing container — whether it ran in a verified TEE, which TEE platform, and whether the measurement matched the registered expected value. Attestation status is part of the compliance record, not a separate out-of-band check.
-
-**PHI in telemetry:** the operator-blind boundary depends on the telemetry pipeline being PHI-free. If a workload name or a trace attribute leaks a patient identifier into OpenTelemetry, the boundary collapses. The telemetry schema enforces PHI exclusion, and this is validated by the same L1 input classifier used in the clinical harness — applied to outbound telemetry attributes before they leave the confidential boundary.
-
----
-
-## 7. Agentic management and operations
-
-The harness that governs AI agents running clinical workloads is the same harness that governs the agents managing the infrastructure itself. Operations agents — capacity planners, upgrade orchestrators, anomaly detectors, incident responders — run inside the Strata Harness with the same skill registry, the same guardrail engine, the same audit ledger, and the same human escalation queue as any other agent.
-
-The infrastructure team is the clinical team. The cluster is the patient.
-
-> **The infrastructure operator does not trust the operations agent any more than the clinician trusts the diagnostic agent. Both operate within a defined scope, under enforced guardrails, with every decision recorded and every destructive action requiring human approval.**
-
-### Operations agent roles
-
-| Agent | Responsibilities | Autonomous scope |
-|---|---|---|
-| **Capacity planner** | Watches resource utilization trends. Predicts demand using historical patterns and scheduled workload metadata. Proposes node additions, MIG repartitioning, or volume expansions before headroom is exhausted. | Generate proposals, open tickets. Never purchase hardware or modify production node config. |
-| **Anomaly detector** | Correlates OpenTelemetry metrics and traces across nodes and workloads. Detects unusual patterns — latency spikes, unexpected restarts, guardrail violation rate increases, Raft election anomalies — with causal context. | Create alerts, label root cause candidates. Never take cluster-level action. |
-| **Upgrade orchestrator** | Plans and executes rolling upgrades. Selects order based on Raft voter placement and stateful workload co-location. Monitors health gates between nodes. Automatically rolls back if post-upgrade error rate exceeds threshold. | Plan, drain, restart agent binary, verify re-attach. Escalates: any rollback, any voter that fails to rejoin within SLA. |
-| **Incident responder** | First responder to infrastructure alerts. Runs defined runbooks autonomously — collect logs, check audit ledger, test connectivity, identify affected workloads. Produces a structured incident report within minutes. | Read-only investigation, log collection, runbook execution up to first decision point. Escalates: any remediation that modifies running workloads. |
-| **Cost optimizer** | Identifies underutilized resources — idle MIG instances, over-provisioned memory limits, low-I/O volumes. Proposes right-sizing with projected impact. Tracks whether accepted proposals delivered projected savings. | Generate proposals with projected savings. Escalates: any change to running workload resource limits. |
-| **Security auditor** | Continuously audits cluster state against policy. Detects drift — weakened namespace isolation, skill artifacts with invalid signatures, expiring SPIFFE certificates, TEE measurements that differ from registered expected values. | Detect, report, open compliance ticket. Escalates: any active policy violation immediately, at Critical SLA. |
-
-### Operations guardrail boundaries
-
-Every operations agent has a hard boundary between what it can do autonomously and what it must escalate. The boundary is defined in the harness skill registry and enforced by the guardrail engine — the same L1–L5 enforcement chain as clinical agents:
-
-| Autonomy level | Permitted actions |
+| Component | Role |
 |---|---|
-| **Always autonomous** | Read cluster state · query audit ledger · collect logs · run read-only diagnostic skills · generate proposals · send notifications · open escalation events |
-| **Autonomous with rate limit** | Restart a crashed process (re-attach semantics only) · rotate expiring certificates · rebalance load between healthy nodes · garbage-collect completed job artifacts |
-| **Requires escalation approval** | Drain a node · modify a running workload's resource limits · execute a rollback · change network policy rules · repartition MIG instances · modify tenant namespace isolation config |
-| **Never autonomous** | Delete a namespace · remove a Raft voter permanently · modify the audit ledger · change the harness guardrail policy · access workload data or PHI for any operational purpose |
-
-### Delivery model — self-hosted or as a service
-
-**Self-hosted operations agents** — operations agents deploy as first-class workloads inside the Strata cluster they manage. They are defined in the agent registry like any other agent, with approved skills and guardrail profiles. They authenticate to the cluster API using SPIFFE workload identity scoped to the operations namespace. Who chooses this: hospitals and research institutions that require all management operations to remain within their network boundary, air-gapped environments, organizations with regulatory requirements that prohibit external management plane access.
-
-**Strata Ops (managed service)** — operations agents run in Strata's cloud, connected to the customer cluster via an outbound-only secure channel (no inbound ports opened on the cluster). The channel is mTLS-authenticated with SPIFFE, and the operations agent's access is scoped to read-only cluster telemetry and the harness escalation queue API — it cannot directly call compute or storage backends. Who chooses this: organizations that want operational intelligence without maintaining the operations agents themselves. The service handles upgrades of the operations agents, tuning of anomaly detection models, and 24/7 escalation coverage.
-
-**Data boundary for Strata Ops:** the managed service sees telemetry (metrics, traces, node health) and escalation event metadata. It never sees PHI, workload data, or audit ledger contents — those remain inside the customer's cluster boundary, enforced by the same scoped SPIFFE credentials that govern all other cross-boundary access.
-
-### Operations as a compliance asset
-
-In regulated environments, demonstrating that infrastructure changes are governed and auditable is as important as demonstrating that clinical AI outputs are governed. Strata Ops produces the same artifacts for infrastructure operations as the harness produces for clinical agent invocations: every agent action — every log collection, every proposal, every escalation, every approved remediation — is written to the audit ledger with the same append-only, hash-chained guarantees. A regulator asking "who changed the network isolation policy and when" receives the same answer as "who approved the dosage recommendation and when": a tamper-evident record with reviewer identity, timestamp, and a cryptographic hash of the action.
+| **Agent registry** | Versioned, signed agent definitions packaged as OCI artifacts. Agents are always deployed from registry — never ad-hoc. Supports canary rollout and automatic rollback. |
+| **Skill/tool registry** | MCP-compatible capability catalog. Skills packaged as WASM modules — run identically on cloud and air-gapped edge nodes. Namespace-scoped: tenants cannot enumerate each other's skills. |
+| **Intent descriptor engine** | Instantiates, propagates, and indexes intent descriptors across multi-agent workflows. Injects workflow context into every A2A call and MCP tool invocation transparently. Covered in depth in §5. |
+| **Orchestration layer** | Multi-agent workflow coordination using A2A protocol. Durable task graph — survives node restarts and connectivity loss. Stateless agents coordinate through the graph, not through shared memory. |
+| **Guardrail engine** | Five-layer OPA/Rego enforcement evaluated in-process. Policy rules version-controlled, signed, and pushed from the fleet control plane. Covered in depth in §6. |
+| **Identity fabric** | SPIFFE/SPIRE — every agent receives a workload certificate at startup. mTLS on all agent-to-agent and agent-to-tool calls. Per-fleet and per-agent revocation. |
+| **Audit ledger** | Append-only, hash-chained, OCSF-compliant. Every invocation, policy decision, and escalation recorded. Indexed by `workflow_instance_id` — full cross-agent workflow trace in one query. |
+| **Human escalation queue** | Structured decision workflows with SLA enforcement. Every escalation carries the intent descriptor of the workflow that produced it. Covered in §7. |
+| **Fleet control plane** | GitOps-style declarative fleet state. Push an agent version update and the control plane orchestrates canary rollout across cloud and edge. Drift detection alerts when a node diverges. |
+| **Edge node runtime** | Lightweight binary with local policy cache and registry mirror. Functions fully offline. Syncs audit events and telemetry when connectivity returns. |
 
 ---
 
-## 8. Hyperconverged control plane — no dedicated machines
+## 5. Intent descriptors — ambient workflow intelligence
 
-Traditional control planes require dedicated machines separate from the workload fleet. This creates a circular upgrade problem: upgrading the control plane risks disrupting the workloads it manages, and upgrading workload nodes requires the control plane to be healthy. For stateful services such as a clinical database, this is unacceptable.
+When multiple agents collaborate on a business workflow — order fulfillment, patient triage, loan underwriting, incident response — each agent today knows only its local task. It does not know the broader goal, the constraints that govern this specific instance, which other agents are participating, or what they have already done. Agents make locally reasonable decisions that are globally suboptimal. Audit trails require manual correlation across multiple systems.
 
-Strata breaks this dependency through two invariants:
+Intent descriptors solve this. An intent descriptor is a structured, versioned object that is instantiated at workflow start and propagated automatically to every agent that participates. It is not a task assignment. It is **ambient context**: "you are part of this workflow, here is what matters about it at the level above your task."
 
-1. The control plane is embedded in `strata-agent` — the same binary that runs on every node. Three to five nodes participate in Raft consensus as voters; the rest are learners.
-2. The executor that runs workloads reads from a **local RocksDB WAL**, not from the network. A workload, once running, continues running through any agent restart, upgrade, or loss of Raft quorum.
+> **Intent descriptors give agents the business context they need to make better local decisions — without requiring a central orchestrator to mediate every step.**
 
-> **The executor reads from local disk, not the network. That single property is what breaks the liveness coupling between the control plane and your database.**
+### Anatomy of an intent descriptor
 
-### Safe rolling upgrade sequence
+```json
+{
+  "schema_version": "strata.workflow/v1",
+  "workflow_id": "order-fulfillment-v2",
+  "instance_id": "wf-8f3a9c",
+  "intent": "Fulfill same-day customer order",
+  "goal": "Order #ORD-291847 delivered before 17:00 UTC",
+  "priority": "high",
+  "initiated_by": {
+    "agent": "sales-agent-v3.1",
+    "spiffe_id": "spiffe://strata.acme.com/ns/sales/agent/sales-agent"
+  },
+  "context": {
+    "customer_tier": "enterprise",
+    "sla_deadline": "2026-08-08T17:00:00Z",
+    "regulatory_flags": [],
+    "domain": "order-management"
+  },
+  "participants": [
+    {
+      "role": "inventory-checker",
+      "agent": "inventory-agent-v2.4",
+      "status": "complete",
+      "completed_at": "2026-08-08T09:14:22Z"
+    },
+    {
+      "role": "payment-validator",
+      "agent": "payment-agent-v1.9",
+      "status": "active"
+    },
+    {
+      "role": "fulfillment-scheduler",
+      "agent": "fulfillment-agent-v3.0",
+      "status": "pending"
+    }
+  ],
+  "constraints": {
+    "spend_limit_usd": 500,
+    "allowed_suppliers": ["supplier-a", "supplier-b"],
+    "escalate_on_sla_risk": true,
+    "sla_risk_threshold_minutes": 60
+  },
+  "trace_context": {
+    "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  }
+}
+```
+
+### What each agent can do with it
+
+The descriptor is available to every agent in the workflow at invocation time. Agents use it to make better local decisions without needing to be explicitly programmed for every scenario:
+
+- The **fulfillment agent** sees this is a high-priority enterprise order expiring at 17:00 and selects expedited fulfillment without being told explicitly.
+- The **payment agent** sees the spend limit and applies it directly — no round-trip to ask.
+- Any agent can see that inventory clearance is already complete — no redundant check.
+- Any agent can see that `escalate_on_sla_risk` is true and knows to surface an escalation if it detects risk to the deadline, referencing the workflow instance rather than just its local task.
+- A guardrail rule can read `workflow.priority == "high"` and `remaining_sla < 60min` and unlock expedited spend approval — contextual policy that would otherwise require a separate orchestration branch.
+
+### How it propagates
+
+Propagation follows **W3C Trace Context + OpenTelemetry Baggage** — the same mechanism that carries trace IDs across service boundaries, extended with business-semantic fields. The intent descriptor is attached to every A2A call and every MCP tool invocation as a signed context header. Agents do not forward it manually — the Strata node runtime injects and extracts it transparently at the transport layer.
+
+The `traceparent` field ties the business workflow to the technical trace: OpenTelemetry spans generated during the workflow carry the same trace ID, so infrastructure latency and business-level workflow events appear in the same observability tool.
+
+### What the audit ledger gains
+
+Every audit event is indexed by `workflow_instance_id`. The full cross-agent trace for "Order #ORD-291847" — every agent invocation, every skill call, every policy decision, every escalation — is reconstructable in a single query. A regulator or incident reviewer does not assemble it manually from five separate logs.
 
 ```
-Step 1  Mark node Draining — scheduler stops new placements
-Step 2  Transfer Raft leadership to another voter (if applicable) · <500ms
-Step 3  Demote to learner via joint consensus — quorum maintained throughout
-Step 4  systemctl restart strata-agent (new binary) · agent restarts in ~2s
-Step 5  Executor reads RocksDB WAL · scans running workloads
-        observed == desired → no action taken on database
-Step 6  Rejoin as learner · catch up from last applied index · re-promote
-Step 7  Node marked Active · scheduler resumes placement
-        Database: uninterrupted throughout all 7 steps
+GET /audit/workflow/wf-8f3a9c
+
+→ 14 events across 3 agents · 4m 37s elapsed · 0 policy violations
+  09:14:08  inventory-agent-v2.4   INVOKED   role=inventory-checker
+  09:14:09  inventory-agent-v2.4   SKILL     check-inventory(SKU-449) → in_stock=true
+  09:14:10  inventory-agent-v2.4   COMPLETE  result=inventory_cleared
+  09:14:12  payment-agent-v1.9     INVOKED   role=payment-validator
+  09:14:13  payment-agent-v1.9     GUARD     L2 scope check spend_limit=500 ✓
+  09:14:14  payment-agent-v1.9     SKILL     validate-payment(amount=312.40) → approved
+  ...
 ```
 
-### Autonomous mode — surviving quorum loss
+### Intent descriptors as an open standard
 
-If Raft quorum is lost, the executor switches to **autonomous mode**. It continues running existing workloads and healing crashed processes, but freezes desired-state reconciliation entirely — it will not act on deletions or changes until quorum is restored. This prevents a split-brain scenario from terminating a running database.
-
----
-
-## 9. Storage and networking
-
-### Storage
-
-- **Local NVMe** — exposed via SPDK vhost-user target, controlled through SPDK's JSON-RPC socket. For VMs: virtio-blk or NVMe-over-vhost-user. For containers and processes: direct bind-mount with io_uring. Per-tenant I/O QoS enforced via blk-mq cgroups — each tenant namespace has its own IOPS and bandwidth ceiling.
-- **Distributed block** — Linstor with DRBD for synchronous replication. Replication path stays in kernel space. The agent drives Linstor via its REST API.
-- **Model weights** — JuiceFS mounted read-only, backed by S3-compatible object storage, with aggressive local SSD caching. For confidential inference workloads, model weight objects are encrypted with keys sealed to the TEE measurement.
-
-### Networking
-
-The default data plane is eBPF/XDP via Cilium's dataplane library — fast path stays in kernel, no Kubernetes required. Per-tenant network policy is enforced in the XDP layer: tenant namespaces are assigned distinct VXLAN VNIs, and cross-namespace traffic is denied by default with explicit allow-list rules for approved inter-tenant service calls.
-
-For GPU clusters requiring low-latency communication, the agent configures RoCEv2 with rdma-core for control and ibverbs for the data path, including GID table setup and QP management. SR-IOV is supported for workloads requiring dedicated NIC VFs — the agent enumerates VFs via sysfs, binds them to `vfio-pci`, and passes PCI addresses to cloud-hypervisor's device assignment API.
+The intent descriptor schema is a candidate for standardization through the Linux Agent Foundation — a "Workflow Context Protocol" alongside MCP and A2A. Any agent framework that implements the propagation contract gains interoperability: a LangGraph agent, an AutoGen agent, and a Strata-native agent can all participate in the same workflow and share the same descriptor. The standard we define is the network effect.
 
 ---
 
-## 10. Accelerator subsystem
+## 6. Guardrail engine — layered enforcement
 
-Strata treats GPUs, NPUs, and CPU acceleration features as first-class resources with inventory, scheduling, and lifecycle management on par with memory and CPU cores. The agent discovers hardware at startup — NVML for Nvidia, ROCm SMI for AMD, `cpuid` for CPU features — and publishes the inventory to the control plane.
+Guardrails are not prompts. They are enforced in the Strata node runtime, in-process, before and after every model call and skill invocation. The model cannot override them. A guardrail violation does not produce an agent output — it produces a structured exception written to the audit ledger and, where configured, routed to the human escalation queue.
 
-- **Nvidia MIG** — profiles configured via NVML and exposed as independent schedulable resources. A single A100 can be partitioned into up to seven MIG instances, each hardware-isolated from the others and assignable to a distinct tenant namespace.
-- **GPU SR-IOV** — for GPUs that support SR-IOV, each tenant can be assigned a dedicated GPU VF with hardware-enforced memory isolation. No shared compute context, no cross-VF cache side channels.
-- **GPU topology** — NVLink graph and PCIe bandwidth from NVML's topology API drive co-location decisions for peer-to-peer workloads.
-- **CPU inference** — Intel AMX and AVX-512 VNNI detected and surfaced as node labels. ARM SVE2 detected on ARM nodes. The scheduler targets CPU-based inference to the right hardware without operator intervention.
+Guardrail rules are Rego policies — version-controlled, signed, tested locally before deployment, pushed from the fleet control plane. They can read the intent descriptor: a rule may behave differently for a high-priority workflow nearing its SLA deadline than for a low-priority background task.
+
+| Layer | Name | What it checks |
+|---|---|---|
+| L1 | Input classification | Data sensitivity and domain context. Gates model selection, skill eligibility, and required isolation tier. |
+| L2 | Scope enforcement | Agent's declared skill set and tool bindings vs. the request. Structural check — independent of model behavior. |
+| L3 | Domain boundary rules | Hard domain-specific constraints: no autonomous diagnosis, no unapproved spend beyond limit, no data crossing a defined boundary. Stored as signed policy objects. Can reference `intent.constraints`. |
+| L4 | Output validation | Fast local classifier (sub-100ms): hallucinated entities, contradictions with structured context, confidence below threshold. The classifier is itself a versioned, approved skill registry artifact. |
+| L5 | Escalation & circuit breaker | Routes borderline cases to the human escalation queue. Hard-stops policy violations. Auto-suspends agents exceeding violation rate threshold. |
+
+### Workflow-aware guardrail example
+
+```rego
+# Allow expedited supplier spend when SLA is critically close
+allow_expedited_spend {
+  input.intent.priority == "high"
+  remaining_sla_minutes < 30
+  input.request.spend_usd <= input.intent.constraints.spend_limit_usd * 1.5
+  input.supplier == input.intent.constraints.allowed_suppliers[_]
+}
+
+remaining_sla_minutes := m {
+  deadline := time.parse_rfc3339_ns(input.intent.context.sla_deadline)
+  m := (deadline - time.now_ns()) / 60000000000
+}
+```
 
 ---
 
-## 11. Why healthcare first
+## 7. Human escalation queue
 
-Healthcare is simultaneously the highest-stakes and most infrastructure-constrained domain in the world. Hospitals operate at the intersection of three forces no existing platform handles well together: regulatory compliance (HIPAA, GDPR, FDA 21 CFR Part 11, EU AI Act), the physical reality of intermittent or absent cloud connectivity in clinical settings, and rapidly growing demand for real-time AI inference at the point of care.
+When a guardrail fires, the agent output is stopped — but the business situation that triggered the workflow has not stopped. The escalation queue routes the event to the right human, with complete context including the full intent descriptor and workflow audit trail, within a time-bound SLA.
+
+It is a **structured decision workflow**, not an alerting system. Every escalation event is an atomic unit of governance with an owner, a deadline, permissible response options, and an immutable resolution record.
+
+### Reviewer response options
+
+| Response | Output state | Audit record |
+|---|---|---|
+| **Approve & release** | Delivered unchanged | Reviewer identity, timestamp, notes, output hash |
+| **Modify & release** | Reviewer edits; modified version delivered | Original hash + modified hash + full diff — permanently archived |
+| **Reject** | Not delivered; caller receives structured error | Rejection reason, reviewer identity, timestamp |
+| **Flag for policy review** | Rejected for now | Policy amendment workflow opened, linked to this event |
+
+### SLA tiers
+
+| Severity | Primary SLA | On SLA miss |
+|---|---|---|
+| Critical — safety or compliance | 5 minutes | Secondary escalation + compliance incident |
+| High — domain boundary | 15 minutes | On-call escalation |
+| Medium — low confidence | 2 hours | Team digest |
+| Low — policy advisory | 24 hours | Weekly governance report |
+
+The context provided to every reviewer is assembled automatically by the platform at the moment of guardrail trigger: agent identity and version, requesting user, the workflow intent descriptor, guardrail layers triggered with rule names, the blocked output, and SLA countdown with secondary escalation path on miss. The reviewer never queries another system.
+
+---
+
+## 8. Federated harness policy
+
+In a large organization — a health system with dozens of hospitals, a bank with multiple lines of business, a retailer with regional and brand entities — policy governance is a hierarchy, not a single source of truth. Platform leadership sets a mandatory floor. Entities below that tier can restrict or specialize, but never relax.
+
+> **Policy inherits downward and can only be tightened, never loosened. This invariant is enforced at runtime — it is not convention.**
+
+### Three-tier hierarchy
+
+| Tier | Authority | Scope |
+|---|---|---|
+| Platform operator | Mandatory floor — cannot be overridden | System-wide guardrail rules, required isolation tiers, approved skill baseline, audit retention |
+| Organization | Can restrict, not relax | Org-specific guardrail additions, skill scope, escalation SLA, namespace isolation minimums |
+| Department / team | Can restrict within org scope | Specialty rules, agent config, local escalation routing |
+
+### Propagation phases
+
+| Phase | Behavior | Promotion trigger |
+|---|---|---|
+| **Observe** | Violations logged but not blocked — teams see impact before enforcement | Governance review + sign-off |
+| **Warn** | Violations allowed through with warning — teams can adapt | Explicit promotion — not automatic |
+| **Enforce** | Full enforcement — violations block output and trigger escalation | Rollback takes effect within one Raft heartbeat (~2s) |
+
+### Peer federation
+
+For organizations that need to share policy and audit across institutional boundaries — research consortia, multi-enterprise supply chains — Strata supports a peer federation model governed by unanimous consent. No member can push a rule into another's policy namespace unilaterally. Shared audit views show aggregate compliance metrics; individual events never cross the institutional boundary without explicit consent.
+
+---
+
+## 9. Multi-tenancy — isolation at every layer
+
+A single Strata deployment serves multiple organizations, business units, or regulated workloads simultaneously. The **Namespace** is the first-class tenancy boundary — every agent, skill, policy, and audit record belongs to a namespace. Isolation is enforced at the platform layer across every dimension.
+
+| Layer | Mechanism | What it prevents |
+|---|---|---|
+| **Identity** | SPIFFE trust domain per namespace. Workload certificates cannot authenticate across namespaces without explicit federation policy. | A compromised agent in Tenant A authenticating to Tenant B's skills. |
+| **Policy** | Namespace-scoped policy inheritance. A policy pushed to Namespace A has no effect on Namespace B. | Policy misconfiguration in one tenant affecting another. |
+| **Skill registry** | Skills are namespace-scoped. Tenants cannot enumerate or invoke each other's registered skills. | Skill enumeration or invocation across tenant boundaries. |
+| **Audit ledger** | Namespace-partitioned. Audit queries are scoped to the requesting namespace. | Audit data leaking between tenants. |
+| **Escalation queue** | Escalation events are namespace-scoped. Reviewers only see events from namespaces they are authorized for. | Clinical escalation events visible to unrelated teams. |
+| **Workflow context** | Intent descriptors are namespace-scoped. A workflow in Namespace A cannot reference participants or constraints from Namespace B. | Cross-tenant workflow data leakage. |
+| **Network (infrastructure layer)** | When deployed on Strata compute fabric: per-tenant eBPF network policy, VXLAN VNIs, deny-by-default between namespaces. | Traffic interception or injection across tenant network segments. |
+
+For deployments requiring infrastructure-level isolation — regulated workloads, third-party vendor code, or environments where platform-layer isolation is insufficient — Strata integrates with the underlying infrastructure to enforce VM-per-tenant or SR-IOV VF assignment at the compute layer.
+
+---
+
+## 10. Confidential compute and trust
+
+Tenant namespace isolation prevents agents from seeing each other. Confidential compute prevents the infrastructure operator from seeing the agents. These are different threat models, and both matter in regulated industries.
+
+A hospital running a third-party diagnostic AI does not want the cloud provider, the managed service operator, or their own infrastructure team to read the model weights or patient data during inference. Hardware trusted execution environments (TEEs) make this possible.
+
+### Trust ladder
+
+| Tier | Isolation boundary | Suitable for |
+|---|---|---|
+| Standard container / process | cgroups + namespaces | General workloads, non-sensitive data |
+| VM-per-tenant | Hypervisor | Regulated workloads, stronger tenant isolation |
+| Confidential VM (AMD SEV-SNP / Intel TDX) | CPU memory encryption | PHI processing, operator-untrusted environments |
+| Confidential container (kata-cc + SEV-SNP / TDX) | CPU memory encryption + measured container image | Full operator-blind PHI inference, third-party model IP protection |
+
+Strata is TEE-aware. When an agent is deployed into a confidential container, the agent registry records the expected TEE measurement alongside the agent version and skill set. The audit ledger entry for every invocation includes the attestation status of the executing container — attestation is part of the compliance record, not an out-of-band check.
+
+Remote attestation follows the standard flow: hardware TEE measurement → attestation verifier (AMD KDS / Intel PCS, or customer-operated) → sealed key release (HashiCorp Vault + TEE plugin). Only after a verified measurement does the key management system release the decryption key for model weights or PHI. In the highest-trust deployments, the attestation verifier is customer-controlled — Strata provides the software, the customer operates it.
+
+---
+
+## 11. Open standards stack
+
+Every protocol, event format, and identity mechanism in Strata is an open standard with an independent standards body or CNCF project backing it. Vendor-neutral at the protocol layer is not a marketing claim — it is enforced by the technology choices.
+
+| Problem | Standard | Why |
+|---|---|---|
+| Tool & context access | **Model Context Protocol (MCP)** | Anthropic open spec; adopted by major model providers. De facto tool access standard. |
+| Agent-to-agent calls | **A2A protocol** | Google open spec; vendor-neutral agent interoperability. MCP governs tool access, A2A governs agent coordination. |
+| Workflow context propagation | **W3C Trace Context + OTel Baggage + Strata WCP** | Intent descriptors ride OTel Baggage headers; trace IDs tie business events to infrastructure spans. WCP (Workflow Context Protocol) proposed for Linux Agent Foundation standardization. |
+| Workload identity | **SPIFFE / SPIRE** | CNCF graduated. Zero-trust identity without a service mesh dependency. Works across K8s, bare metal, edge. |
+| Policy enforcement | **Open Policy Agent (OPA) + Rego** | CNCF graduated. Declarative, testable, version-controlled. Evaluates in-process — no network round-trip. |
+| Observability | **OpenTelemetry** | CNCF. Traces, metrics, logs — model-agnostic, infra-agnostic. Every agent invocation emits OTel spans. |
+| Audit event schema | **OCSF** | Backed by AWS, Splunk, IBM, CrowdStrike. Regulatory-grade audit event format. Queryable by any OCSF-aware SIEM without transformation. |
+| Skill portability | **WASM / WASI** | Skills compile once, run anywhere. Sandboxed execution — a skill cannot escape its declared capabilities. Natural fit for edge. |
+| Artifact packaging | **OCI artifacts** | Agents and skills packaged as OCI images. Any OCI-compliant registry works — Harbor, ECR, GCR, GHCR. |
+| Event routing | **CloudEvents** | CNCF. Fleet events (agent deployed, policy violated, escalation triggered, workflow completed) route to any CloudEvents consumer — Kafka, Pub/Sub, EventBridge — without format translation. |
+| Human identity | **OIDC / OAuth 2.0** | Federate with enterprise IdPs — Okta, Azure AD, Ping. Reviewer identity in escalation events is enterprise-verifiable. |
+| API | **gRPC / protobuf + OpenAPI** | gRPC for node-to-control-plane communication. OpenAPI for the developer-facing REST API and GitOps integration. |
+
+---
+
+## 12. Why healthcare first
+
+Healthcare is the sharpest proof point for every problem Strata solves. Agents operate across heterogeneous infrastructure. Policy is federated across a hierarchy of institutions. Compliance is non-negotiable. PHI demands operator-blind confidential compute. Human oversight of clinical AI is a regulatory requirement, not a preference. And the cost of getting it wrong is measured in patient outcomes.
 
 | Metric | Figure |
 |---|---|
 | Global healthcare IT spend | $390B projected by 2028 |
-| Top AI adoption barrier | 78% of hospitals cite infrastructure complexity |
+| Top AI adoption barrier | 78% of hospitals cite infrastructure and governance complexity |
 | FDA-cleared AI/ML devices | 6,000+ as of 2025, growing 40% year-on-year |
 
-### Primary use cases
+### Primary healthcare use cases
 
 | Use case | How Strata enables it |
 |---|---|
-| **Radiology AI** | Inference on GPU-backed VMs or confidential containers with model weights sealed to a TEE measurement. Sub-second latency, fully air-gapped, model IP protected from the operator. |
-| **Genomics pipelines** | I/O-intensive bioinformatics on SPDK NVMe with NUMA-pinned CPU processes, per-namespace I/O QoS preventing research pipelines from starving clinical workloads. |
-| **Clinical edge** | Single-node Strata on a clinic workstation. Runs confidential containers and a local LLM for clinical summarization with operator-blind PHI handling. No internet required. |
-| **Research clusters** | Multi-node GPU clusters at academic medical centers. Federated learning across institutions over RoCEv2 fabric. Peer-federated harness policy for cross-institution agent governance. |
-| **Multi-tenant hospital platform** | Cardiology, radiology, pharmacy, and third-party vendors all on the same cluster with hardware-enforced namespace isolation. A vendor's agent cannot enumerate another vendor's approved skills. |
-
----
-
-## 12. Strata Harness — the trust fabric
-
-When a hospital deploys an agentic system, the infrastructure question is only half the problem. The other half is trust: who approved this skill, what can this agent decide autonomously, what must it escalate, and how do we prove to a regulator that every inference was within bounds?
-
-Strata Harness answers those questions. It sits above the compute fabric and below the clinical application. It owns the agent lifecycle, the skill and tool registry, the guardrail enforcement pipeline, the inference routing policy, the human escalation queue, and the compliance audit trail — all running locally, with no patient data leaving the facility.
-
-> **The harness is not a deployment tool. It is a trust fabric. It is what makes it safe to give an AI agent access to a hospital's systems — not by trusting the model, but by enforcing the envelope around it.**
-
-| Component | Role |
-|---|---|
-| **Agent registry** | Versioned, signed agent definitions — model, skill set, tool bindings, guardrail profile, data access scope. Every agent is an immutable artifact deployed from registry; never run ad-hoc. |
-| **Skill registry** | Discrete approved capabilities — drug interaction lookup, FHIR query, imaging classifier, note summarizer. Each skill is independently versioned, approved, and scoped. Namespace-scoped — tenants cannot enumerate each other's skills. |
-| **Tool bindings** | System integrations — EHR API, PACS, lab systems. Bound at deploy time with least-privilege SPIFFE credentials. Revocable independently of the agent. |
-| **Guardrail engine** | Five-layer enforcement: input classification, scope check, clinical boundary rules, output validation, escalation triggers. Enforced in-process — no network round-trip, no model override possible. |
-| **Inference router** | Selects model and hardware target per request based on data classification and attestation requirements. PHI-tagged requests never routed off-cluster. Requests requiring confidential compute routed only to verified TEE nodes. |
-| **Audit ledger** | Append-only, tamper-evident log of every agent invocation including TEE attestation status. Namespace-partitioned. Queryable for regulatory reporting without manual assembly. |
+| **Multi-agent clinical workflows** | Intent descriptors propagate patient encounter context across triage, radiology, drug interaction, and summarization agents. Full cross-agent audit in one query. |
+| **Radiology AI** | Third-party FDA-cleared classifier deployed as a confidential container. Model weights sealed to TEE measurement. Operator-blind inference. Attestation status in every audit entry. |
+| **Federated hospital governance** | Health system sets mandatory guardrail floor. Hospitals restrict. Departments narrow further. Policy enforced at runtime — no convention or trust required. |
+| **Multi-vendor agent estate** | Five vendors' agents, three infrastructure substrates, one governance layer. Same policy, same audit, same identity across all of them. |
+| **Edge clinic deployment** | Single-node edge runtime with local policy cache. Functions offline. PHI never leaves the clinic network. Audit events sync when connectivity returns. |
 
 ---
 
 ## 13. Deploying agentic systems — the hospital use case
 
-A hospital deploys a diagnostic support agent into a confidential container. The agent can query a patient's medication list, run a drug interaction check, invoke a radiology classifier, and produce a clinical summary — but it must not issue a diagnosis autonomously, must not recommend a drug dosage without a clinician in the loop, and must never route patient data outside the facility. The confidential container ensures that even the infrastructure team cannot read the PHI during inference.
+A hospital deploys a diagnostic support system consisting of four agents from two vendors: a triage agent, a radiology classifier, a drug interaction checker, and a clinical note summarizer. The agents run on a mix of on-premise GPU nodes and a hospital-operated edge appliance in the radiology suite. The infrastructure team does not change. The agent vendors operate independently. Strata is the layer that makes it governable.
 
-### Skill and tool approval pipeline
+### What Strata provides end-to-end
 
-| Stage | Actor | Action |
-|---|---|---|
-| Submit | Provider | Skill artifact + regulatory attestation submitted to harness registry |
-| Safety scan | Automated | Output analysis, hallucination rate, known failure mode check |
-| Clinical review | Hospital informatics team | Scope review — not safety re-evaluation if third-party attested |
-| Sign & publish | Harness | Versioned, signed, scoped artifact committed to registry |
-| Active | All agents | Skill available to agents with appropriate scope binding |
+**At deployment:** each agent is pulled from the Strata skill registry as a signed OCI artifact, deployed to the appropriate node with a SPIFFE identity certificate, and bound to the approved skill set and guardrail profile defined in the agent registry. No ad-hoc installs. No manual credential distribution.
 
-Third-party providers with existing FDA clearance, CE marking, or hospital vendor approval submit a pre-attested skill bundle. The harness carries the attestation record alongside the artifact, reducing the hospital's review burden to a scope check rather than a safety re-evaluation.
+**At runtime:** when a clinician initiates a patient encounter, the triage agent creates a workflow instance and instantiates an intent descriptor containing the encounter context, the patient data classification (PHI), the applicable regulatory flags, and the SLA. Every subsequent agent invocation in the encounter — radiology classifier, drug interaction check, note summarizer — receives that descriptor automatically. Each agent knows it is part of this encounter, what the constraints are, and what upstream agents have already determined.
+
+**At guardrail trigger:** if the clinical note summarizer produces a candidate output that contains a drug dosage recommendation (a clinical boundary violation), the L3 guardrail blocks the output, writes a structured event to the audit ledger, and opens an escalation event in the clinical informatics queue. The reviewer receives the full encounter context — the intent descriptor, the upstream agent outputs, the blocked candidate, and an SLA countdown — without querying any other system.
+
+**At audit:** the encounter audit log is a single coherent record indexed by workflow instance ID — every agent invocation, every skill call, every guardrail decision, every escalation and its resolution. A regulator requesting evidence of AI governance for this encounter receives a complete, tamper-evident record assembled automatically.
 
 ### Active skill registry — example
 
-| Skill | Provider | Approval | Data scope |
+| Skill | Provider | Approval | Data scope | Isolation required |
+|---|---|---|---|---|
+| Drug interaction check v2.1.0 | Strata | Hospital approved | Medication list | Standard |
+| Chest X-ray classifier v1.4.2 | Rad-AI Inc. | FDA 510(k) | DICOM images | Confidential container (kata-cc) |
+| Clinical note summarizer v3.0.1 | MedScribe Co. | Hospital approved | PHI | Confidential container + TEE attestation |
+| FHIR patient query v1.0.0 | Strata | Hospital approved | PHI | Standard + audit required |
+
+---
+
+## 14. Provider ecosystem and marketplace
+
+Strata defines an open **Provider SDK** — a specification for packaging an agent or skill as a signed, self-attesting artifact that carries its own safety documentation, validation results, regulatory status, and expected TEE measurement for confidential deployments.
+
+When a provider submits a skill artifact, the attestation bundle travels with it. A hospital's compliance team reviews scope and integration — not model safety, which the attestation covers. This compresses the time from regulatory clearance to deployed skill from months to days, and gives the hospital a stronger machine-verifiable guarantee than a vendor attestation letter.
+
+### Marketplace flywheel
+
+A provider with an FDA-cleared clinical classifier wants to reach every hospital running agents. They publish once to the Strata marketplace with a machine-readable attestation bundle. Every Strata fleet can pull it with a one-click deploy, with signature verification and attestation chain checked automatically at install. Strata takes a revenue share and provides the trust infrastructure. More providers attract more customers; more customers attract more providers.
+
+### Canary rollout
+
+New skill versions roll to 5% of traffic automatically. Automated rollback fires if the guardrail violation rate increases beyond threshold. Hospital compliance approval is required to promote to 100%. The full rollout history is in the audit ledger.
+
+---
+
+## 15. Monetization
+
+The open-core model maximizes community adoption and creates clear upgrade pressure at enterprise scale. The free tier is genuinely useful — that is what drives adoption.
+
+### Tiers
+
+| Tier | Target | Delivery | What they get |
 |---|---|---|---|
-| Drug interaction check v2.1.0 | Strata | Hospital approved | Med list only |
-| Chest X-ray classifier v1.4.2 | Rad-AI Inc. | FDA 510(k) | DICOM images — confidential container required |
-| Clinical note summarizer v3.0.1 | MedScribe Co. | Hospital approved | PHI — local only, TEE attestation required |
-| FHIR patient query v1.0.0 | Strata | Hospital approved | PHI — audit required |
-| Lab result interpreter v0.9.0 | Internal | Pending review | Lab data only |
+| **Community** | Individual developers, researchers, small teams | OSS, self-hosted | Core runtime, local registry, single-node fleet, basic OPA guardrails, audit ledger |
+| **Cloud** | Teams and startups | Hosted control plane | Fleet management, hosted registry, hosted audit ledger, intent descriptor system, canary rollouts, OCSF export |
+| **Enterprise** | Mid-to-large organizations | Self-hosted or hosted | Multi-tenant namespaces, advanced policy management, fleet drift detection, enterprise IdP integration, SLA |
+| **Regulated** | Healthcare, finance, defense | Enterprise + compliance modules | HIPAA, SOC 2, FDA 21 CFR Part 11, EU AI Act policy packs; confidential compute integration; human-in-the-loop workflows; attestation; compliance report generation |
+| **Marketplace** | Skill and agent providers | Revenue share | 20–30% platform take on skill and agent sales; trust infrastructure (attestation verification, signature checking) included |
 
-### Inference routing
+### Revenue streams
 
-| Routing target | Applicable requests | Conditions |
+| Stream | Mechanism | Who pays |
 |---|---|---|
-| **On-cluster standard** | Non-PHI queries, administrative summarization | Data class = non-PHI |
-| **On-cluster TEE** | PHI-tagged requests, clinical decision support, radiology inference with third-party models | Data class = PHI or model requires IP protection. Routes only to nodes with verified TEE. Attestation status logged. |
-| **External (allowlisted only)** | De-identified research queries | Data class = non-PHI; BAA in place; explicit policy rule required |
+| **Hosted fleet control plane** | Per active agent / month | Platform teams who want fleet ops without operating a control plane |
+| **Compliance packs** | Annual license per fleet | Regulated industries — updated as standards evolve, audit report generation included |
+| **Strata Ops** | Per fleet node / month | Enterprises running large agent fleets who want autonomous fleet operations (anomaly detection, upgrade orchestration, capacity planning) |
+| **Marketplace revenue share** | 20–30% of skill sales | Providers monetize through the marketplace; platform takes the trust-infrastructure cut |
+| **Enterprise support + SLA** | Annual contract | Enterprises with existing agent deployments to migrate and operate at scale |
+
+### What is open source
+
+- Node runtime and agent executor
+- Skill loader and WASM sandbox
+- OPA guardrail engine integration
+- SPIFFE identity sidecar
+- OTel collector pipeline
+- Local audit ledger
+- A2A and MCP client libraries
+- Intent descriptor schema and propagation library
+- CLI and GitOps tooling
+
+**OSS home:** core runtime and intent descriptor propagation library → CNCF Sandbox. Workflow Context Protocol spec and OCSF audit schema → Linux Agent Foundation.
 
 ---
 
-## 14. Guardrail engine — layered enforcement
+## 16. Community and governance
 
-Guardrails are not prompts. They are enforced in the harness runtime, in-process on the node running the agent. The model cannot override them. A guardrail violation does not produce a model output — it produces a structured exception that goes to the audit ledger and, if configured, to the human escalation queue.
+Strata's community strategy is modeled on Kubernetes: seed with a working, opinionated v0, release early, and let practitioners shape v1. We open-source the core before Series A, partner with three to five design partners in healthcare and enterprise for v0, and present at KubeCon and at HIMSS and AMIA in year one.
 
-| Layer | Name | What it checks | When it runs |
-|---|---|---|---|
-| L1 | Input classification | Data sensitivity (PHI, PII, de-identified) and clinical context. Gates which models, skills, and TEE tier are eligible. | Before any model or skill is invoked |
-| L2 | Scope enforcement | Agent's declared skill set and tool bindings vs. the request. Structural check — independent of model behavior. | Before each tool call and skill invocation |
-| L3 | Clinical boundary rules | Domain-specific hard rules: no autonomous diagnosis, no autonomous dosage recommendation, consent checks. Stored as signed policy objects. | Against both inputs and candidate outputs |
-| L4 | Output validation | Fast local classifier (sub-100ms): hallucinated drug names, contradictions with structured context, confidence below threshold. Classifier is itself a versioned, approved skill registry artifact. | On every model completion before output reaches caller |
-| L5 | Escalation & circuit breaker | Routes borderline cases to human escalation queue. Hard-stops policy violations. Auto-suspends agents exceeding violation rate threshold. | On policy violations — hard stops are instantaneous |
-
-### A normal invocation — trace
-
-```
-00:00.000  AUDIT  session=a3f9 user=dr.chen agent=diagnostic-support-v2.1
-00:00.001  GUARD  L1 input classification → PHI=true context=diagnostic tee_required=true
-00:00.002  ROUTE  inference_target=on-cluster-tee model=clinical-llm-v4.2 node=gpu-node-03
-00:00.002  ATTEST attestation=verified tee=amd-sev-snp measurement=e3f9a1... ✓
-00:00.003  GUARD  L2 scope check → skill=drug-interaction-check ✓
-00:00.041  SKILL  drug-interaction-check(metoprolol, lisinopril, heparin) → 0 critical interactions
-00:00.042  AUDIT  skill_call logged result_hash=9f3a2c
-00:00.043  GUARD  L3 boundary check → no diagnosis assertion in output candidate ✓
-00:00.387  INFER  model inference complete 343ms · 1,204 tokens · clinical-llm-v4.2
-00:00.388  GUARD  L4 output validation → confidence=0.91 no hallucinated drug names ✓
-00:00.390  AUDIT  response delivered output_hash=7b1e4d latency=390ms tee=verified guardrails=5
-```
-
-### A guardrail stop — trace
-
-```
-00:00.387  INFER  model inference complete · clinical-llm-v4.2
-00:00.388  GUARD  L4 output validation → drug dosage recommendation detected in output
-00:00.388  BLOCK  L3 boundary violation → autonomous dosage recommendation outside approved scope
-00:00.389  AUDIT  VIOLATION logged rule=no-autonomous-dosage severity=HIGH session=a3f9
-00:00.389  ESCAL  escalation opened → queue=clinical-review SLA=15min notify=informatics-oncall
-00:00.390  RESP   caller receives structured_error code=CLINICAL_BOUNDARY_EXCEEDED
-```
-
----
-
-## 15. Human escalation queue
-
-When a guardrail fires, the model's output is stopped — but the clinical situation that prompted the query has not stopped. The escalation queue bridges that gap. It routes the event to the right human, with complete context, within a time-bound SLA, and records what the human decided and why.
-
-It is not an alerting system. It is a **structured decision workflow**: every escalation event is an atomic unit of clinical governance with an owner, a deadline, a set of permissible responses, and an immutable resolution record.
-
-### Content provided to every reviewer
-
-Every field is populated automatically by the harness at the moment of guardrail trigger — the reviewer never queries another system:
-
-- Agent identity, version, and TEE attestation status
-- Requesting clinician identity and department
-- Patient reference (anonymised above department level)
-- Guardrail layers triggered, with rule names and severity
-- The original query text
-- The blocked model output (not shown to the clinician)
-- Structured context provided to the agent (vitals, medication list, etc.)
-- SLA countdown with secondary escalation path on miss
-
-### Reviewer response options
-
-| Response | Output state | Audit record | Policy effect |
-|---|---|---|---|
-| **Approve & release** | Delivered unchanged | Reviewer identity, timestamp, notes, output hash | None. One-time session override. |
-| **Modify & release** | Reviewer edits; modified version delivered | Original hash + modified hash + full diff | None. Diff permanently archived. |
-| **Reject** | Not delivered; clinician receives structured error | Rejection reason, reviewer identity, timestamp | None. |
-| **Flag for policy review** | Rejected for now | Policy review ticket opened, linked to this event | Opens a formal policy amendment workflow. Guardrail rule updated if approved. |
-
-### SLA configuration
-
-| Severity | Primary SLA | Primary assignee | On SLA miss |
-|---|---|---|---|
-| Critical — patient safety | 5 minutes | On-call attending | Dept. chief + compliance incident |
-| High — clinical boundary | 15 minutes | Clinical informatics on-call | Pharmacy / specialty on-call |
-| Medium — confidence low | 2 hours | AI governance team | CMIO daily digest |
-| Low — policy advisory | 24 hours | Clinical informatics team | Weekly governance report |
-
----
-
-## 16. Federated harness policy
-
-A health system is not a hospital. Large systems operate dozens of hospitals across multiple states, each with its own credentialing, formularies, and policy requirements. Federated policy defines an inheritance hierarchy, a controlled propagation protocol, and a clear separation between what system leadership mandates and what individual sites configure.
-
-> **Policy is inherited downward and cannot be weakened. It can only be strengthened or specialized at lower levels. This invariant is enforced by the runtime — it is not convention.**
-
-### Three-tier hierarchy
-
-| Tier | Actor | Authority | What they configure |
-|---|---|---|---|
-| Tier 1 — Health system | e.g. UC Health | Mandatory floor — cannot be overridden | System-wide guardrail rules, TEE requirements, approved skill baseline, cross-site compliance reporting |
-| Tier 2 — Hospital | e.g. UCSF Medical Center | Can restrict, not relax | Site-specific guardrail additions, skill scope opt-in, escalation SLA and reviewer config, namespace isolation tier minimums |
-| Tier 3 — Department | e.g. Cardiology | Can restrict within site scope only | Specialty guardrail rules, agent config, local escalation routing |
-
-### Policy propagation — observe, warn, enforce
-
-| Phase | Behaviour | Promotion trigger |
-|---|---|---|
-| **Observe (shadow)** | Violations logged but not blocked. Teams see impact before enforcement. | System governance reviews shadow report and signs promotion |
-| **Warn** | Violations allowed through with warning appended. Departments can adapt. | System CMIO signs enforcement promotion — not automatic |
-| **Enforce** | Full enforcement. Violations block output and trigger escalation queue. | Rollback takes effect within one Raft heartbeat (~2 seconds) |
-
-### Cross-system federation — research consortia
-
-Some deployments extend beyond a single health system. Strata supports a **peer federation model**: institutions negotiate a shared policy namespace governed by unanimous consent. No member can push a rule into another's harness unilaterally. Shared reporting shows aggregate compliance metrics only — individual patient events never cross the institutional boundary.
-
----
-
-## 17. Compliance as a first-class output
-
-| Requirement | Standard | How harness satisfies it | Artifact |
-|---|---|---|---|
-| PHI never leaves facility | HIPAA | Inference router enforces data classification at runtime; TEE routing enforces confidential compute requirement | Route log + attestation record |
-| Audit trail of AI outputs | HIPAA · 21 CFR 11 | Append-only ledger, output hash, user identity, model version, TEE attestation status on every call | Audit ledger |
-| Human oversight of clinical AI | FDA AI/ML · EU AI Act | Clinical boundary rules + mandatory escalation for diagnosis assertions | Escalation log |
-| Software version traceability | 21 CFR 11 | Every invocation logs model, skill, agent, harness, and TEE firmware version | Version manifest |
-| Validated software changes | 21 CFR 11 | Approval pipeline with signed attestations, TEE measurement registration, canary rollout, auto-rollback | Approval record |
-| Access control | HIPAA | SPIFFE workload identity, per-session consent check, namespace-scoped RBAC | Access log |
-| Operator-blind PHI processing | HIPAA minimum-necessary | Confidential containers with sealed keys; operator sees only ciphertext | TEE attestation record |
-| Incident response evidence | EU AI Act · HIPAA | Full session replay; tamper-evidence via hash chain; TEE measurement at time of incident | Session replay |
-| Infrastructure change governance | Internal · audit | Operations agent actions in same audit ledger as clinical actions — same hash chain, same tamper-evidence | Ops audit ledger |
-
----
-
-## 18. Provider ecosystem
-
-Strata Harness defines an open **provider SDK** — a specification for packaging a skill or model as a signed, self-attesting artifact that carries its own safety documentation, test results, regulatory status, and — where applicable — expected TEE measurement for confidential deployment.
-
-The hospital's compliance team reviews **scope and integration** — not the underlying model safety, which travels with the attestation. A provider whose model runs inside a confidential container can include the expected TEE measurement in the attestation bundle. The hospital's harness verifies the measurement at deployment time and at every invocation. This compresses the time from regulatory clearance to hospital deployment from months to days, while giving the hospital a stronger guarantee than a vendor attestation letter alone.
-
-The attestation schema is the key network effect. If Strata defines the open standard for how a clinical AI provider packages regulatory documentation as a machine-readable artifact, then every hospital using Strata benefits from every provider approval.
-
-### Provider SDK components
-
-- **Open spec** — signed artifacts with embedded attestations. Rust and Python libraries. Versioned, reproducible builds.
-- **Attestation schema** — regulatory status, validation dataset, known failure modes, contraindicated contexts, TEE measurement (optional). Machine-readable. Travels into every audit ledger.
-- **Marketplace** — curated registry of approved providers. One-click pull into any Strata Harness instance.
-- **Canary rollout** — new skill versions roll to 5% of traffic automatically. Automated rollback on guardrail violation rate increase. Hospital approval required to reach 100%.
-
----
-
-## 19. Community and governance
-
-Strata's growth strategy is modeled on Kubernetes: seed the community with a working, opinionated v0, release it early, and let practitioners shape v1. We donate the compute fabric core to CNCF under a Sandbox proposal and the agentic infrastructure primitives — the harness protocol, the provider SDK, the attestation schema — to the Linux Agent Foundation. We retain the hosted Strata Cloud harness and Strata Ops as commercial products.
-
-We seed the community by open-sourcing the core before our Series A, partnering with three to five academic medical centers as design partners, and presenting at KubeCon and at AMIA and HIMSS in year one.
+The Workflow Context Protocol — the open standard for intent descriptor propagation — is the strategic contribution to the Linux Agent Foundation. If Strata defines the open standard for how agents share business workflow context, every framework that adopts the standard interoperates with Strata's governance layer. That is the network effect at the protocol layer, not the product layer.
 
 > **We are not building a walled garden. We are building the commons — and building a business on top of the commons by being the best operators of it.**
 
 ---
 
-## 20. Roadmap
+## 17. Roadmap
 
 | When | Milestone | Scope |
 |---|---|---|
-| **Now** | v0 — core fabric | Embedded Raft control plane. Process and container backends. Local NVMe via SPDK. eBPF networking with per-tenant network policy. Zero-downtime rolling upgrades. SPIFFE identity. Namespace isolation (cgroups v2 + Linux namespaces). CLI and gRPC API. Harness: skill registry, guardrail engine L1–L4, audit ledger, inference router. |
-| **Q4 2026** | v1 — community release | VM backend. Distributed block storage (Linstor). Confidential containers (kata-cc + AMD SEV-SNP). GPU support — Nvidia MIG, AMD ROCm. Hardware SR-IOV isolation. Remote attestation service. Kubernetes mode. CNCF Sandbox submission. Harness: human escalation queue, provider SDK v1, three medical design partners in production. |
-| **H1 2027** | v1.5 — harness and ops GA | Strata Cloud multi-tenant harness: federated policy, fleet upgrades, compliance reporting, HIPAA audit trail export, workload marketplace. Strata Ops managed service: all six operations agents, self-hosted and SaaS modes. Intel TDX support. Enterprise support tier. First paid customers. |
-| **H2 2027** | v2 — intelligence fabric | Federated learning primitives. Inference-optimized scheduling (disaggregated prefill/decode). Confidential inference with operator-blind model weights at scale. ARM SVE2 and Intel AMX first-class. Edge form factors — NVIDIA Jetson, Apple Silicon, Qualcomm. Multi-institution peer-federated research clusters. Provider SDK donated to Linux Agent Foundation. |
+| **Now — v0** | Core platform | Node runtime. Agent and skill registry (OCI + MCP). Intent descriptor engine v1. Guardrail engine L1–L4 (OPA/Rego in-process). SPIFFE identity fabric. Append-only audit ledger (OCSF). Fleet control plane — single region. A2A orchestration. CLI and gRPC API. CloudEvents emission. Edge node with offline mode. |
+| **Q4 2026 — v1** | Community release + healthcare GA | Human escalation queue. Federated policy (3-tier hierarchy). Workflow Context Protocol spec submitted to Linux Agent Foundation. Confidential container support (kata-cc + AMD SEV-SNP). Remote attestation service. CNCF Sandbox submission. Three medical design partners in production. Provider SDK v1 and marketplace alpha. HIPAA compliance pack. |
+| **H1 2027 — v1.5** | Enterprise and marketplace GA | Multi-tenant namespaces. Fleet drift detection and automated remediation. Enterprise IdP integration. Peer-federated policy (research consortia). Compliance report generation (HIPAA, SOC 2, EU AI Act). Marketplace GA with revenue share. Strata Ops managed service (capacity planning, anomaly detection, upgrade orchestration, incident response). Intel TDX support. First paid customers. |
+| **H2 2027 — v2** | Intelligence fabric | Workflow analytics — aggregate intent descriptor data surfaces patterns across workflow instances for operational and business intelligence. Federated learning integration. Multi-enterprise cross-org workflow federation. Edge form factors — NVIDIA Jetson, Apple Silicon, Qualcomm. ARM and Intel AMX skill optimization. WCP adopted as LAF standard. Marketplace reaches 50+ attested providers. |
 
 ---
 
-## 21. Why now
+## 18. Why now
 
-Three forces are converging:
+Three forces are converging to make the agentic middle layer an urgent infrastructure problem:
 
-1. **The inference era** is making GPU and accelerator management, multi-tenant isolation, and confidential compute first-class infrastructure problems. Every organization running clinical AI needs to solve placement, isolation, utilization, and attestation simultaneously — and no open platform does this today.
+**1. Agents are proliferating faster than governance.** Every major enterprise is deploying multiple agent systems — from different vendors, on different infrastructure, built on different models. The heterogeneity is not going away. What is missing is not more agents; it is the layer that makes the estate legible, trustworthy, and operable as a coherent whole.
 
-2. **Regulatory pressure** — EU AI Act, FDA AI/ML guidance, state-level AI-in-medicine legislation — is pushing healthcare organizations toward auditable, on-premise, operator-blind infrastructure that cloud-only solutions cannot provide. Confidential compute is moving from a niche capability to a compliance requirement.
+**2. Regulatory pressure is forcing the governance question.** The EU AI Act, FDA AI/ML guidance, HIPAA AI enforcement, and emerging state-level regulation are creating mandatory requirements for audit trails, human oversight, and explainable agent decisions. Organizations that built without governance infrastructure are now rebuilding it under deadline. Organizations starting now need to build it in from the first day.
 
-3. **The Rust systems ecosystem** has matured to the point where a production-grade stack — Raft, NVMe userspace I/O, eBPF, VMM, TEE integration, agentic runtime — can be built and maintained by a small team with high confidence in correctness, memory safety, and performance.
+**3. The open standards moment is now.** MCP, A2A, SPIFFE, OPA, OCSF, and OpenTelemetry have matured to the point where a vendor-neutral governance layer can be built entirely on open foundations — no proprietary wire protocol, no locked data format. The Workflow Context Protocol we are proposing is the missing piece: the open standard that ties business intent to the technical event stream. The organization that defines and donates that standard shapes the ecosystem the way the OCI image spec shaped the container ecosystem.
 
-The window to define the open standard for AI-era infrastructure is open. Kubernetes defined the container scheduling standard in 2016. Strata intends to define the compute fabric, multi-tenant isolation, confidential compute, and agentic trust standard for the inference era — one owned by the community that runs it, one that extends from a clinic edge node to a thousand-GPU research cluster, and one where the compliance audit trail, the attestation record, and the operations governance log are built in from day one.
+The window to define the open governance standard for the agent era is open. We intend to own that standard — not as a proprietary product, but as the commons that every agent framework builds on, with a commercial business built on being its best operator.
 
 ---
 
-*Strata · Vision Paper v0.3 · June 2026*
-*OSS core → CNCF · Agentic primitives → Linux Agent Foundation · Harness + Ops → commercial products*
+*Strata · Vision Paper v0.4 · August 2026*
+*OSS core → CNCF · Workflow Context Protocol → Linux Agent Foundation · Fleet control plane + compliance packs + marketplace → commercial products*
 *Pre-publication draft — confidential*
